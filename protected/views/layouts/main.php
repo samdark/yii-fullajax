@@ -8,39 +8,73 @@
 <body>
 	<h1><?php echo CHtml::encode(Yii::app()->name)?></h1>
 	<script>
-		jQuery(function($){
-			var lastUrl = '#';
-			function load(url){
-				// if URL is a hashtag no need to reload it
-				if(url.match(/^#/)){
-					window.location.hash = url.replace(/^#/, '');
-					return;
+		var fullAJAX = {
+			/**
+			 * Stores latest valid URL we've opened.
+			 */
+			lastUrl: '#',
+			/**
+			 * For demo purpose. Shows URL in H2.
+			 * @param url
+			 * @param status
+			 */
+			updateUrl: function(url, status){
+				if(status == 'success'){
+					fullAJAX.lastUrl = url;
+					$("#url").html(url);
 				}
-
-				$('#container').load(url, function(response, status, xhr){
-					if(status == 'success'){
-						lastUrl = url;
-						$("#url").html(url);
+				else {
+					$("#url").html(status);
+				}
+			},
+			/**
+			 * Loads URL.
+			 * @param url
+			 */
+			loadUrl: function(url){
+				$("#container").load(url, function (response, status, xhr)
+				{
+					fullAJAX.updateUrl(url, status);
+				});
+			},
+			/**
+			 * Allows to refresh AJAX part.
+			 */
+			refresh: function(){
+				fullAJAX.loadUrl(fullAJAX.lastUrl);
+			},
+			init: function(){
+				// Adds AJAX handler to all links.
+				// HTML is used since Yii delegates to body by default and we need
+				// to let Yii handler to execute.
+				$('html').delegate("a","click", function(e){
+					if(e.isDefaultPrevented()){
+						return;
 					}
-					else {
-						$("#url").html(status);
+					// if link doesn't have .noajax then we should not handle it
+					if(!$(this).attr("noajax")){
+						var url = $(this).attr("href");
+
+						// if URL is a hashtag no need to reload it
+						if(url.match(/^#/)){
+							window.location.hash = url.replace(/^#/, '');
+						}
+						else {
+							fullAJAX.loadUrl(url);
+						}
+						return false;
 					}
 				});
+
+				// Adds refresh button handler
+				$("#reload-page").click(function(e){
+					e.preventDefault();
+					fullAJAX.refresh();
+				});
 			}
-
-			$("#reload-page").click(function(e){
-				e.preventDefault();
-				load(lastUrl);
-			});
-
-			// adds AJAX handler to all links
-			$("#container").delegate("a", "click", function(e){
-				if(e.isDefaultPrevented()){
-					return false;
-				}
-				e.preventDefault();
-				load(e.target.href);
-			});
+		}
+		jQuery(function($){
+			fullAJAX.init();
 		});
 	</script>
 
